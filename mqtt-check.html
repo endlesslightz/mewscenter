@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MQTT Data Check</title>
+</head>
+<body>
+    <h1>MQTT Data Check</h1>
+
+    <p><strong>Broker:</strong> <code id="broker"></code></p>
+    <p><strong>Topic:</strong> <code id="topic"></code></p>
+    <p><strong>Status:</strong> <span id="status">Memulai...</span></p>
+    <p><strong>Jumlah pesan:</strong> <span id="count">0</span></p>
+
+    <button id="clearButton" type="button">Bersihkan data</button>
+    <h2>Data diterima</h2>
+    <pre id="output">Belum ada pesan.</pre>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script>
+        const brokerUrl = 'wss://broker.hivemq.com:8884/mqtt';
+        const topic = 'weather_station/esp32s3/data';
+        const clientId = `mqtt-check-${Math.random().toString(16).slice(2)}`;
+        let messageCount = 0;
+
+        const brokerElement = document.getElementById('broker');
+        const topicElement = document.getElementById('topic');
+        const statusElement = document.getElementById('status');
+        const countElement = document.getElementById('count');
+        const outputElement = document.getElementById('output');
+
+        brokerElement.textContent = brokerUrl;
+        topicElement.textContent = topic;
+
+        function setStatus(text) {
+            statusElement.textContent = text;
+        }
+
+        function showMessage(messageTopic, message) {
+            messageCount += 1;
+            countElement.textContent = messageCount;
+
+            let content;
+            try {
+                content = JSON.stringify(JSON.parse(message.toString()), null, 2);
+            } catch (error) {
+                content = message.toString();
+            }
+
+            outputElement.textContent =
+                `Diterima: ${new Date().toLocaleString('id-ID')}\n` +
+                `Topic: ${messageTopic}\n\n` +
+                content;
+        }
+
+        document.getElementById('clearButton').addEventListener('click', () => {
+            messageCount = 0;
+            countElement.textContent = '0';
+            outputElement.textContent = 'Belum ada pesan.';
+        });
+
+        if (!window.mqtt) {
+            setStatus('Library MQTT gagal dimuat');
+        } else {
+            setStatus('Menghubungkan...');
+            const client = mqtt.connect(brokerUrl, {
+                clientId,
+                clean: true,
+                reconnectPeriod: 5000,
+            });
+
+            client.on('connect', () => {
+                setStatus('Terhubung, subscribe...');
+                client.subscribe(topic, (error) => {
+                    if (error) {
+                        setStatus(`Subscribe gagal: ${error.message}`);
+                        return;
+                    }
+                    setStatus('Terhubung dan menunggu data...');
+                });
+            });
+
+            client.on('message', (messageTopic, message) => {
+                showMessage(messageTopic, message);
+                setStatus('Data diterima');
+            });
+
+            client.on('reconnect', () => setStatus('Mencoba menghubungkan ulang...'));
+            client.on('offline', () => setStatus('Offline'));
+            client.on('error', (error) => setStatus(`Error: ${error.message}`));
+        }
+    </script>
+</body>
+</html>

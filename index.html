@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MewsCenter — Monitoring Early Warning System</title>
+    <meta name="description"
+        content="Sistem monitoring early warning untuk wilayah Lampahan Timur, Kec. Timang Gajah, Kab. Bener Meriah, Aceh. Memantau data sensor, cuaca, dan gempa bumi secara real-time.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <link rel="stylesheet" href="style.css?v=4">
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <!-- <div class="logo-icon">
+                    <img src="uns.webp" alt="Logo UNS" class="uns-logo">
+                </div> -->
+                <div class="header-text">
+                    <h1>MewsCenter</h1>
+                    <p class="header-subtitle">Monitoring Early Warning System — Lampahan Timur, Bener Meriah, Aceh</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-badge" id="connectionStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
+                <div class="clock" id="liveClock"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Sensor Cards Row -->
+        <section class="section" id="sensorSection">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="section-icon">📡</span>
+                    Data Sensor IoT
+                </h2>
+                <span class="section-badge" id="sensorLastUpdate">Memuat...</span>
+            </div>
+            <div class="sensor-grid" id="sensorGrid">
+                <div class="sensor-card" id="cardSoilMoisture">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon humidity-icon">🌱</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Kelembapan Tanah</span>
+                            <span class="sensor-value" id="sensorSoilMoisture">--</span>
+                            <span class="sensor-unit">%</span>
+                        </div>
+                        <div class="sensor-trend" id="trendSoilMoisture"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill humidity-bar" id="barSoilMoisture" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardPergeseran">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon temp-icon">📐</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Pergeseran Tanah</span>
+                            <span class="sensor-value" id="sensorPergeseran">--</span>
+                            <span class="sensor-unit">°</span>
+                        </div>
+                        <div class="sensor-trend" id="trendPergeseran"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill temp-bar" id="barPergeseran" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardWaterLevel">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon signal-icon">🌊</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Tinggi Muka Air</span>
+                            <span class="sensor-value" id="sensorWaterLevel">--</span>
+                            <span class="sensor-unit">cm</span>
+                        </div>
+                        <div class="sensor-trend" id="trendWaterLevel"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill signal-bar" id="barWaterLevel" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardWaterPressure">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon pressure-icon">💧</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Tekanan Air</span>
+                            <span class="sensor-value" id="sensorWaterPressure">--</span>
+                            <span class="sensor-unit">bar</span>
+                            <span class="sensor-sub" id="subWaterVoltage">Volt: -- V</span>
+                        </div>
+                        <div class="sensor-trend" id="trendWaterPressure"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill pressure-bar" id="barWaterPressure" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardMpu1">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon pressure-icon">🧭</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Kemiringan MPU 1</span>
+                            <span class="sensor-value" id="sensorMpu1Total">--</span>
+                            <span class="sensor-unit">°</span>
+                            <span class="sensor-sub" id="subMpu1">Tebing: --° · Kika: --°</span>
+                        </div>
+                        <div class="sensor-trend" id="trendMpu1Total"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill pressure-bar" id="barMpu1Total" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardMpu2">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon altitude-icon">⚖️</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Kemiringan MPU 2</span>
+                            <span class="sensor-value" id="sensorMpu2Total">--</span>
+                            <span class="sensor-unit">°</span>
+                            <span class="sensor-sub" id="subMpu2">Tebing: --° · Kika: --°</span>
+                        </div>
+                        <div class="sensor-trend" id="trendMpu2Total"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill altitude-bar" id="barMpu2Total" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardVoltageBattery">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon battery-icon">🔋</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Baterai Utama</span>
+                            <span class="sensor-value" id="sensorVoltageBattery">--</span>
+                            <span class="sensor-unit">V</span>
+                            <span class="sensor-sub" id="subVoltageHw">HW: -- V</span>
+                        </div>
+                        <div class="sensor-trend" id="trendVoltageBattery"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill battery-bar" id="barVoltageBattery" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardSolar">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon temp-icon">☀️</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Panel Surya</span>
+                            <span class="sensor-value" id="sensorVoltageSolar">--</span>
+                            <span class="sensor-unit">V</span>
+                            <span class="sensor-sub" id="subCurrentSolar">Arus: -- mA</span>
+                        </div>
+                        <div class="sensor-trend" id="trendVoltageSolar"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill temp-bar" id="barVoltageSolar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardPowerDc">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon altitude-icon">⚡</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Daya DC</span>
+                            <span class="sensor-value" id="sensorPowerDc">--</span>
+                            <span class="sensor-unit">mW</span>
+                            <span class="sensor-sub" id="subDcDetail">-- V · -- mA</span>
+                        </div>
+                        <div class="sensor-trend" id="trendPowerDc"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill altitude-bar" id="barPowerDc" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="sensor-card" id="cardGsmSignal">
+                    <div class="sensor-card-inner">
+                        <div class="sensor-icon signal-icon">📶</div>
+                        <div class="sensor-info">
+                            <span class="sensor-label">Sinyal GSM</span>
+                            <span class="sensor-value" id="sensorGsmSignal">--</span>
+                            <span class="sensor-unit">CSQ</span>
+                            <span class="sensor-sub" id="subGpsCoords">GPS: --, --</span>
+                        </div>
+                        <div class="sensor-trend" id="trendGsmSignal"></div>
+                    </div>
+                    <div class="sensor-bar">
+                        <div class="sensor-bar-fill signal-bar" id="barGsmSignal" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Device Diagnostics (/status) -->
+            <div class="device-status-bar" id="deviceStatusBar">
+                <span class="device-status-title">Status Modul:</span>
+                <div class="device-pills" id="devicePills">
+                    <span class="device-pill">Menunggu topik /status...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts + Map Row -->
+        <section class="section">
+            <div class="dual-panel">
+                <!-- Chart Panel -->
+                <div class="panel chart-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <span class="section-icon">📈</span>
+                            Grafik Sensor (100 Data Terakhir)
+                        </h2>
+                        <div class="chart-controls">
+                            <button class="chart-btn active" data-chart="soilMoisture" id="btnChartSoil">Tanah (%)</button>
+                            <button class="chart-btn" data-chart="pergeseran" id="btnChartShift">Pergeseran (°)</button>
+                            <button class="chart-btn" data-chart="waterLevel" id="btnChartWater">Air (cm)</button>
+                            <button class="chart-btn" data-chart="voltageBattery" id="btnChartBatt">Baterai (V)</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="sensorChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Map Panel -->
+                <div class="panel map-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <span class="section-icon">🗺️</span>
+                            Peta Wilayah Lampahan Timur
+                        </h2>
+                    </div>
+                    <div id="map" class="map-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Weather + Earthquake Row -->
+        <section class="section">
+            <div class="dual-panel">
+                <!-- Weather Panel -->
+                <div class="panel weather-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <span class="section-icon">🌤️</span>
+                            Prakiraan Cuaca BMKG
+                        </h2>
+                        <span class="section-badge" id="weatherSource">BMKG</span>
+                    </div>
+                    <div class="weather-location" id="weatherLocation">Memuat lokasi...</div>
+                    <div class="weather-grid" id="weatherGrid">
+                        <div class="weather-skeleton">
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Earthquake Panel -->
+                <div class="panel earthquake-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <span class="section-icon">🔴</span>
+                            Gempa Bumi Terbaru
+                        </h2>
+                        <span class="section-badge" id="quakeSource">BMKG TEWS</span>
+                    </div>
+                    <div class="earthquake-content" id="earthquakeContent">
+                        <div class="earthquake-skeleton">
+                            <div class="skeleton-line wide"></div>
+                            <div class="skeleton-line medium"></div>
+                            <div class="skeleton-line narrow"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="logo-footer">
+            <img src="unsyiah.webp" alt="Logo Unsyiah" class="uns-logo">
+            <img src="uns.webp" alt="Logo UNS" class="uns-logo">
+            <img src="itb.png" alt="Logo ITB" class="uns-logo">
+            <img src="benermeriah.png" alt="Logo Bener Meriah" class="uns-logo">
+        </div>
+        <p><br>MewsCenter — Program Pengabdian Masyarakat Kolaborasi Indonesia (PMKI) 2026.<br> Kerjasama Universitas
+            Syiah
+            Kuala - Universitas Sebelas Maret - Institut Teknologi Bandung <br> Kampung Lampahan Timur, Aceh &copy; 2026
+        </p>
+        <p class="footer-sub">Data sensor: <a href="https://www.emqx.com/en/mqtt/public-mqtt5-broker"
+            target="_blank">MQTT EMQX</a> · Cuaca & Gempa: <a href="https://www.bmkg.go.id" target="_blank">BMKG</a>
+        </p>
+    </footer>
+
+    <script src="app.js?v=4"></script>
+</body>
+
+</html>
